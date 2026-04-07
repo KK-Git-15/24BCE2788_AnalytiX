@@ -1,7 +1,7 @@
 # Dashlytics – Social Media Analytics Dashboard
 
 ## Live Website
-https://yourusername.github.io/social-media-dashboard/
+https://kk-git-15.github.io/24BCE2788_AnalytiX/
 
 ## Project Overview
 

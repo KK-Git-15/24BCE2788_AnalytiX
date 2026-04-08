@@ -1,7 +1,7 @@
 /* ===========================
    DATA
 =========================== */
-const dashboardData = {
+const data = {
   followers: 12540,
   engagement: "78%",
   growth: "+12%",
@@ -19,18 +19,18 @@ const dashboardData = {
     { title: "Product Post",   date: "Apr 08", status: "Review"    }
   ],
   platforms: [
-    { name: "Instagram", value: 45 },
-    { name: "YouTube",   value: 30 },
-    { name: "Twitter",   value: 15 },
-    { name: "LinkedIn",  value: 10 }
+    { name: "Instagram", value: 45, color: "#e1306c" },
+    { name: "YouTube",   value: 30, color: "#ff0000" },
+    { name: "Twitter",   value: 15, color: "#1da1f2" },
+    { name: "LinkedIn",  value: 10, color: "#0a66c2" }
   ],
   monthlyEngagement: [1200, 1900, 3000, 5000, 4200, 6100]
 };
 
 /* ===========================
-   THEME TOGGLE
+   THEME
 =========================== */
-function applyTheme(dark) {
+function setTheme(dark) {
   document.body.classList.toggle("dark", dark);
   localStorage.setItem("theme", dark ? "dark" : "light");
 }
@@ -39,59 +39,94 @@ if (localStorage.getItem("theme") === "dark") {
   document.body.classList.add("dark");
 }
 
-document.getElementById("themeToggle").onclick = () => {
-  applyTheme(!document.body.classList.contains("dark"));
-};
+document.getElementById("themeToggle").onclick = () =>
+  setTheme(!document.body.classList.contains("dark"));
 
-document.getElementById("themeToggle2").onclick = () => {
-  applyTheme(!document.body.classList.contains("dark"));
-};
+document.getElementById("themeToggle2").onclick = () =>
+  setTheme(!document.body.classList.contains("dark"));
 
 /* ===========================
-   SIDEBAR NAVIGATION
+   DATE PILL
 =========================== */
-const navItems = document.querySelectorAll(".nav-item");
-const sections = document.querySelectorAll(".section");
-const pageTitleEl = document.getElementById("pageTitle");
+const now = new Date();
+document.getElementById("datePill").textContent =
+  now.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+
+/* ===========================
+   NAVIGATION
+=========================== */
+const navItems  = document.querySelectorAll(".nav-item");
+const sections  = document.querySelectorAll(".section");
+const breadcrumb = document.getElementById("breadcrumbActive");
+
+const sectionTitles = {
+  overview:  "Overview",
+  analytics: "Analytics",
+  posts:     "Posts",
+  settings:  "Settings"
+};
 
 navItems.forEach(item => {
   item.onclick = () => {
     navItems.forEach(i => i.classList.remove("active"));
     item.classList.add("active");
-
-    sections.forEach(sec => sec.classList.add("hidden"));
+    sections.forEach(s => s.classList.add("hidden"));
     document.getElementById(item.dataset.section).classList.remove("hidden");
-
-    const titles = {
-      overview:  "Overview",
-      analytics: "Analytics",
-      posts:     "Posts",
-      settings:  "Settings"
-    };
-    pageTitleEl.textContent = titles[item.dataset.section] || "";
+    breadcrumb.textContent = sectionTitles[item.dataset.section] || "";
   };
 });
 
 /* ===========================
-   OVERVIEW STATS
+   COMPUTE STATS
 =========================== */
-document.getElementById("followers").textContent =
-  dashboardData.followers.toLocaleString();
-document.getElementById("engagement").textContent = dashboardData.engagement;
-document.getElementById("growth").textContent     = dashboardData.growth;
+let totalLikes = 0, totalComments = 0;
+data.posts.forEach(p => { totalLikes += p.likes; totalComments += p.comments; });
+const avgLikesVal    = Math.round(totalLikes / data.posts.length);
+const avgCommentsVal = Math.round(totalComments / data.posts.length);
+const maxLikes       = Math.max(...data.posts.map(p => p.likes));
+
+/* ===========================
+   FILL KPI VALUES
+=========================== */
+document.getElementById("followers").textContent  = data.followers.toLocaleString();
+document.getElementById("engagement").textContent = data.engagement;
+document.getElementById("growth").textContent     = data.growth;
+document.getElementById("avgLikesOv").textContent = avgLikesVal;
+document.getElementById("totalPosts").textContent = data.posts.length;
+document.getElementById("avgLikes").textContent   = avgLikesVal;
+document.getElementById("avgComments").textContent = avgCommentsVal;
 
 /* ===========================
    CHART HELPERS
 =========================== */
-const isDark = () => document.body.classList.contains("dark");
-
-const gridColor = () => isDark()
-  ? "rgba(255,255,255,0.07)"
-  : "rgba(0,0,0,0.06)";
-
-const labelColor = () => isDark() ? "#94a3b8" : "#6b7280";
-
 Chart.defaults.font.family = "'DM Sans', sans-serif";
+Chart.defaults.font.size   = 12;
+
+const gridCol  = () => document.body.classList.contains("dark")
+  ? "rgba(255,255,255,0.06)"
+  : "rgba(0,0,0,0.06)";
+const tickCol  = () => document.body.classList.contains("dark")
+  ? "#475569" : "#9ca3af";
+
+const chartOpts = (extraScales = {}) => ({
+  responsive: true,
+  maintainAspectRatio: false,
+  plugins: { legend: { display: false } },
+  scales: {
+    x: {
+      grid: { color: gridCol() },
+      ticks: { color: tickCol() },
+      border: { display: false },
+      ...extraScales.x
+    },
+    y: {
+      grid: { color: gridCol() },
+      ticks: { color: tickCol() },
+      border: { display: false },
+      ...extraScales.y
+    }
+  }
+});
 
 /* ===========================
    GROWTH CHART
@@ -102,47 +137,107 @@ new Chart(document.getElementById("growthChart"), {
     labels: ["Jan", "Feb", "Mar", "Apr", "May", "Jun"],
     datasets: [{
       label: "Followers",
-      data: dashboardData.growthData,
+      data: data.growthData,
       borderColor: "#3b82f6",
       backgroundColor: "rgba(59,130,246,0.08)",
       borderWidth: 2.5,
       pointBackgroundColor: "#3b82f6",
+      pointBorderColor: "#fff",
+      pointBorderWidth: 2,
       pointRadius: 4,
+      pointHoverRadius: 6,
       fill: true,
-      tension: 0.4
+      tension: 0.45
     }]
   },
   options: {
-    responsive: true,
-    plugins: { legend: { display: false } },
-    scales: {
-      x: {
-        grid: { color: gridColor() },
-        ticks: { color: labelColor() }
-      },
-      y: {
-        grid: { color: gridColor() },
-        ticks: { color: labelColor() }
+    ...chartOpts(),
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        backgroundColor: "#111827",
+        titleColor: "#9ca3af",
+        bodyColor: "#fff",
+        padding: 10,
+        cornerRadius: 8
       }
     }
   }
 });
 
 /* ===========================
-   ANALYTICS STATS
+   PLATFORM DONUT (Overview)
 =========================== */
-let totalLikes = 0, totalComments = 0;
-dashboardData.posts.forEach(p => {
-  totalLikes += p.likes;
-  totalComments += p.comments;
+const platColors = data.platforms.map(p => p.color);
+
+new Chart(document.getElementById("platformDonut"), {
+  type: "doughnut",
+  data: {
+    labels: data.platforms.map(p => p.name),
+    datasets: [{
+      data: data.platforms.map(p => p.value),
+      backgroundColor: platColors,
+      borderWidth: 0,
+      hoverOffset: 5
+    }]
+  },
+  options: {
+    responsive: true,
+    maintainAspectRatio: false,
+    cutout: "68%",
+    plugins: { legend: { display: false } }
+  }
 });
 
-document.getElementById("totalPosts").textContent   = dashboardData.posts.length;
-document.getElementById("avgLikes").textContent     = Math.floor(totalLikes / dashboardData.posts.length);
-document.getElementById("avgComments").textContent  = Math.floor(totalComments / dashboardData.posts.length);
+// Legend
+const dl = document.getElementById("donutLegend");
+data.platforms.forEach(p => {
+  dl.innerHTML += `
+    <div class="legend-item">
+      <span class="legend-swatch" style="background:${p.color}"></span>
+      ${p.name} <strong style="margin-left:2px;color:var(--text)">${p.value}%</strong>
+    </div>`;
+});
 
 /* ===========================
-   ENGAGEMENT DOUGHNUT
+   MONTHLY ENGAGEMENT CHART
+=========================== */
+new Chart(document.getElementById("monthlyChart"), {
+  type: "line",
+  data: {
+    labels: ["Jan", "Feb", "Mar", "Apr", "May", "Jun"],
+    datasets: [{
+      label: "Engagement",
+      data: data.monthlyEngagement,
+      borderColor: "#10b981",
+      backgroundColor: "rgba(16,185,129,0.08)",
+      borderWidth: 2.5,
+      pointBackgroundColor: "#10b981",
+      pointBorderColor: "#fff",
+      pointBorderWidth: 2,
+      pointRadius: 4,
+      pointHoverRadius: 6,
+      fill: true,
+      tension: 0.45
+    }]
+  },
+  options: {
+    ...chartOpts(),
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        backgroundColor: "#111827",
+        titleColor: "#9ca3af",
+        bodyColor: "#fff",
+        padding: 10,
+        cornerRadius: 8
+      }
+    }
+  }
+});
+
+/* ===========================
+   ENGAGEMENT DONUT (Analytics)
 =========================== */
 new Chart(document.getElementById("engagementChart"), {
   type: "doughnut",
@@ -152,102 +247,83 @@ new Chart(document.getElementById("engagementChart"), {
       data: [totalLikes, totalComments],
       backgroundColor: ["#3b82f6", "#10b981"],
       borderWidth: 0,
-      hoverOffset: 6
+      hoverOffset: 5
     }]
   },
   options: {
     responsive: true,
-    cutout: "65%",
-    plugins: {
-      legend: {
-        position: "bottom",
-        labels: { color: labelColor(), padding: 16, font: { size: 12 } }
-      }
-    }
+    maintainAspectRatio: false,
+    cutout: "68%",
+    plugins: { legend: { display: false } }
   }
 });
 
+const el = document.getElementById("engLegend");
+[["#3b82f6","Likes",totalLikes],["#10b981","Comments",totalComments]].forEach(([c,l,v]) => {
+  el.innerHTML += `
+    <div class="legend-item">
+      <span class="legend-swatch" style="background:${c}"></span>
+      ${l} <strong style="margin-left:2px;color:var(--text)">${v}</strong>
+    </div>`;
+});
+
 /* ===========================
-   PLATFORM BAR CHART
+   PLATFORM BAR CHART (Analytics)
 =========================== */
 new Chart(document.getElementById("platformChart"), {
   type: "bar",
   data: {
-    labels: dashboardData.platforms.map(p => p.name),
+    labels: data.platforms.map(p => p.name),
     datasets: [{
       label: "Share (%)",
-      data: dashboardData.platforms.map(p => p.value),
-      backgroundColor: ["#3b82f6", "#ef4444", "#8b5cf6", "#10b981"],
+      data: data.platforms.map(p => p.value),
+      backgroundColor: data.platforms.map(p => p.color),
       borderRadius: 6,
+      borderSkipped: false,
       borderWidth: 0
     }]
   },
   options: {
-    responsive: true,
-    plugins: { legend: { display: false } },
-    scales: {
-      x: {
-        grid: { display: false },
-        ticks: { color: labelColor() }
-      },
-      y: {
-        grid: { color: gridColor() },
-        ticks: { color: labelColor() }
+    ...chartOpts({ x: { grid: { display: false } } }),
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        backgroundColor: "#111827",
+        titleColor: "#9ca3af",
+        bodyColor: "#fff",
+        padding: 10,
+        cornerRadius: 8,
+        callbacks: { label: ctx => ` ${ctx.raw}% of traffic` }
       }
     }
   }
 });
 
 /* ===========================
-   MONTHLY ENGAGEMENT LINE
+   POSTS TABLE
 =========================== */
-new Chart(document.getElementById("monthlyChart"), {
-  type: "line",
-  data: {
-    labels: ["Jan", "Feb", "Mar", "Apr", "May", "Jun"],
-    datasets: [{
-      label: "Engagement",
-      data: dashboardData.monthlyEngagement,
-      borderColor: "#10b981",
-      backgroundColor: "rgba(16,185,129,0.08)",
-      borderWidth: 2.5,
-      pointBackgroundColor: "#10b981",
-      pointRadius: 4,
-      fill: true,
-      tension: 0.4
-    }]
-  },
-  options: {
-    responsive: true,
-    plugins: { legend: { display: false } },
-    scales: {
-      x: {
-        grid: { color: gridColor() },
-        ticks: { color: labelColor() }
-      },
-      y: {
-        grid: { color: gridColor() },
-        ticks: { color: labelColor() }
-      }
-    }
-  }
-});
-
-/* ===========================
-   TOP POSTS TABLE
-=========================== */
-dashboardData.posts
+data.posts
+  .slice()
   .sort((a, b) => b.likes - a.likes)
-  .forEach(post => {
+  .forEach((post, i) => {
     let perf = "low", label = "Low";
     if (post.likes > 500) { perf = "high";   label = "High";   }
     else if (post.likes > 350) { perf = "medium"; label = "Medium"; }
 
-    document.getElementById("topPosts").innerHTML +=
-      `<tr>
-        <td><strong>${post.title}</strong></td>
+    const engPct = Math.round((post.likes / maxLikes) * 100);
+
+    document.getElementById("topPosts").innerHTML += `
+      <tr>
+        <td><span class="rank-num">#${i + 1}</span></td>
+        <td><span class="post-strong">${post.title}</span></td>
         <td>${post.likes.toLocaleString()}</td>
         <td>${post.comments}</td>
+        <td>
+          <div class="eng-wrap">
+            <div class="eng-bar"><div class="eng-fill" style="width:${engPct}%"></div></div>
+            <span class="eng-pct">${engPct}%</span>
+          </div>
+        </td>
         <td><span class="badge ${perf}">${label}</span></td>
       </tr>`;
   });
@@ -255,12 +331,12 @@ dashboardData.posts
 /* ===========================
    SCHEDULED POSTS
 =========================== */
-dashboardData.scheduled.forEach(post => {
+data.scheduled.forEach(post => {
   const statusClass = post.status.toLowerCase();
-  document.getElementById("scheduledPosts").innerHTML +=
-    `<div class="sched-card">
+  document.getElementById("scheduledPosts").innerHTML += `
+    <div class="sched-card">
       <p class="sched-title">${post.title}</p>
-      <p class="sched-date">📅 ${post.date}</p>
+      <p class="sched-date">&#128197; ${post.date}</p>
       <span class="sched-status ${statusClass}">${post.status}</span>
     </div>`;
 });
